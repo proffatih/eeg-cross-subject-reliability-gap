@@ -129,9 +129,10 @@ axB.axhline(1 / 3, ls=":", lw=1.0, color=GREY, zorder=2)
 axB.annotate(f"{pair:.3f}\n97.6% of full", xy=(2, pair), xytext=(2.2, 0.545),
              fontsize=6.0, color=NAVY, weight="bold", linespacing=1.2,
              arrowprops=dict(arrowstyle="-", color=NAVY, lw=0.8))
-axB.text(4.05, full, "4 contacts", fontsize=5.6, color=RED, va="bottom",
-         ha="right")
-axB.text(0.95, 1 / 3, "chance", fontsize=5.4, color=GREY, va="bottom")
+axB.text(4.05, full + 0.016, "4 contacts", fontsize=5.6, color=RED,
+         va="bottom", ha="right")
+axB.text(0.95, 1 / 3 + 0.016, "chance", fontsize=5.4, color=GREY,
+         va="bottom")
 axB.set_xticks([1, 2, 3, 4]); axB.set_xlim(0.7, 4.3); axB.set_ylim(0.28, 0.87)
 axB.set_yticks([0.4, 0.6, 0.8])
 axB.tick_params(labelsize=5.9, length=2.5, pad=1.5)

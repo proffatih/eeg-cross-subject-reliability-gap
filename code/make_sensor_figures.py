@@ -36,41 +36,84 @@ def save(fig, name):
     print("wrote", name)
 
 
-# ---- Fig. 4: electrode-count reduction -----------------------------------
+# ---- Fig. 4: electrode geometry + array-count reduction --------------------
+# The head schematics carry the central claim: the two-contact array that works
+# is a temporal-frontal diagonal, while a co-located frontal pair of the same
+# size does not. Without the geometry the reader cannot see why.
+from matplotlib.patches import Circle, Ellipse
+
 d = pd.read_csv(os.path.join(R, "sensor_electrode_ablation.csv"))
 full = d[d.n_ch == 4].iloc[0]
 best = d.sort_values("acc", ascending=False).groupby("n_ch").first().reset_index()
+acc_of = dict(zip(d.electrodes, d.acc))
 
-fig, ax = plt.subplots(figsize=(COL, 2.05))
+SITES = {"TP9": (-0.62, -0.46), "AF7": (-0.45, 0.58),
+         "AF8": (0.45, 0.58), "TP10": (0.62, -0.46)}
+
+
+def mini_head(ax, keep, label, value, good=True):
+    ax.set_axis_off(); ax.set_xlim(-1.25, 1.25); ax.set_ylim(-1.30, 1.30)
+    ax.set_aspect("equal")
+    ax.add_patch(Circle((0, 0), 1.0, fc="#F2F4F7", ec="#8899AA", lw=0.9))
+    ax.plot([-0.14, 0, 0.14], [0.99, 1.19, 0.99], color="#8899AA", lw=0.9,
+            solid_joinstyle="round")
+    col = C_ACC if good else "#C44E52"
+    for name, (x, y) in SITES.items():
+        if name in keep:
+            ax.add_patch(Circle((x, y), 0.235, fc=col, ec="white", lw=0.9,
+                                zorder=3))
+            ax.text(x, y, name, color="white", fontsize=4.2, weight="bold",
+                    ha="center", va="center", zorder=4)
+        else:
+            ax.add_patch(Circle((x, y), 0.175, fc="white", ec="#B9C2CC",
+                                lw=0.8, zorder=3))
+    ax.text(0, -1.60, f"{label}   {value:.3f}", fontsize=5.6, weight="bold",
+            color=col, ha="center", va="center")
+
+
+fig = plt.figure(figsize=(COL, 2.45))
+axH1 = fig.add_axes([0.015, 0.560, 0.245, 0.360])
+axH2 = fig.add_axes([0.015, 0.115, 0.245, 0.360])
+mini_head(axH1, {"TP9", "AF8"}, "TP9+AF8", acc_of["TP9+AF8"], good=True)
+mini_head(axH2, {"AF7", "AF8"}, "AF7+AF8", acc_of["AF7+AF8"], good=False)
+fig.text(0.138, 0.975, "two contacts, two placements", fontsize=5.8,
+         weight="bold", ha="center", va="center", color="#222")
+
+ax = fig.add_axes([0.435, 0.165, 0.545, 0.700])
 for k in sorted(d.n_ch.unique()):
     sub = d[d.n_ch == k]
-    ax.scatter([k] * len(sub), sub.acc, s=9, alpha=0.5, color="0.6", zorder=2,
+    ax.scatter([k] * len(sub), sub.acc, s=8, alpha=0.5, color="0.6", zorder=2,
                label="all subsets" if k == 1 else None)
 ax.plot(best.n_ch, best.acc, "o-", color=C_ACC, zorder=3, label="best subset")
 ax.axhline(full.acc, ls="--", lw=0.9, color=C_REF, zorder=1,
-           label="full 4-electrode array")
+           label="full 4-contact array")
 ax.axhline(1 / 3, ls=":", lw=0.9, color="0.35", zorder=1, label="chance")
 for _, row in best.iterrows():
     if row.n_ch < 4:
-        ax.annotate(row.electrodes, (row.n_ch, row.acc), fontsize=5.6,
+        ax.annotate(row.electrodes, (row.n_ch, row.acc), fontsize=5.2,
                     textcoords="offset points", xytext=(4, -8))
-ax.set_xticks([1, 2, 3, 4])
-ax.set_xlabel("electrodes in array"); ax.set_ylabel("LOSO accuracy")
-ax.set_ylim(0.28, 0.86)
+ax.set_xticks([1, 2, 3, 4]); ax.set_ylim(0.28, 0.86)
+ax.set_xlabel("contacts in array", fontsize=6.6, labelpad=1.5)
+ax.set_ylabel("LOSO accuracy", fontsize=6.6, labelpad=1.5)
+ax.tick_params(labelsize=6.2, length=2.5, pad=1.5)
 
 axr = ax.twinx()
 axr.plot(best.n_ch, best.ece, "s--", color=C_ECE, ms=3, lw=1.0,
          label="ECE (best subset)")
-axr.set_ylabel("cross-subject ECE", color=C_ECE)
-axr.tick_params(axis="y", colors=C_ECE, labelsize=6.5)
+axr.set_ylabel("cross-subject ECE", color=C_ECE, fontsize=6.6, labelpad=1.5)
+axr.tick_params(axis="y", colors=C_ECE, labelsize=6.2, length=2.5, pad=1.5)
 axr.grid(False); axr.spines["right"].set_visible(True)
 axr.spines["right"].set_color(C_ECE); axr.spines["right"].set_linewidth(0.7)
 
 h1, l1 = ax.get_legend_handles_labels(); h2, l2 = axr.get_legend_handles_labels()
-ax.legend(h1 + h2, l1 + l2, loc="lower right", ncol=1, fontsize=5.6,
-          handlelength=1.6, borderpad=0.2, labelspacing=0.25)
-save(fig, "fig4_electrode_ablation")
-
+ax.legend(h1 + h2, l1 + l2, loc="lower right", bbox_to_anchor=(1.0, 0.155),
+          fontsize=5.2, handlelength=1.5, borderpad=0.2, labelspacing=0.22,
+          framealpha=0.92)
+for ext in ("pdf", "png"):
+    fig.savefig(os.path.join(FG, f"fig4_electrode_ablation.{ext}"), dpi=400,
+                bbox_inches="tight")
+plt.close(fig)
+print("wrote fig4_electrode_ablation")
 
 # ---- Fig. 5: interference resilience -------------------------------------
 n = pd.read_csv(os.path.join(R, "sensor_noise_resilience.csv"))
