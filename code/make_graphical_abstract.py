@@ -112,8 +112,8 @@ axA.text(ix, iy + ir + 0.055, "dry contact", fontsize=5.5, color=NAVY,
 axA.text(ix, iy - ir - 0.052, "skin, no gel", fontsize=5.1, color="#8A6A57",
          ha="center", va="center", zorder=10)
 
-axA.text(0.67, 0.985, "4-contact dry headband", fontsize=7.4, weight="bold",
-         ha="center", va="center", color="#222")
+axA.text(0.67, 0.985, "Dry headband: 4 contacts $\\rightarrow$ 2 suffice",
+         fontsize=7.4, weight="bold", ha="center", va="center", color="#222")
 axA.text(0.67, 0.115,
          f"TP9 alone ({tp9_only:.2f})  $\\approx$  best 3 contacts without it "
          f"({no_tp9_3:.2f})",
