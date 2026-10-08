@@ -1,0 +1,19 @@
+\begin{table}[!t]
+\caption{Compute budget of the sensor node}
+\label{tab:compute}
+\centering\footnotesize
+\begin{tabular}{lccc}
+\toprule
+Decoder & Model (kB) & Inference ($\mu$s) & Acc. \\
+\midrule
+Full, 4 contacts & 1796 & 31.2 & 0.577 \\
+Full, 2 contacts & 3160 & 53.9 & 0.594 \\
+Compact, 4 contacts & 237 & 6.0 & 0.572 \\
+Compact, 2 contacts & 192 & 4.9 & 0.579 \\
+\midrule
+\multicolumn{4}{l}{Feature extraction: 4.2 ms (4 contacts), 1.7 ms (2 contacts)} \\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\parbox{\columnwidth}{\footnotesize Per 1\,s window, single-threaded on the host CPU; two contacts: TP9+TP10. Timings vary between runs and are meaningful as ratios.}
+\end{table}

@@ -1,0 +1,2 @@
+check,model,acc,f1,ece
+causal chain (single-pass notch + band-pass),GBM,0.5851760851760852,0.5939435059354695,0.3696793594982182

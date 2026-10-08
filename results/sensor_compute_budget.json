@@ -1,0 +1,34 @@
+{
+  "window_s": 1.0,
+  "pair": "TP9+TP10",
+  "feature_extraction_ms": {
+    "4-electrode": 4.180119976666674,
+    "2-electrode": 1.7156315633333936
+  },
+  "decoders": {
+    "full / 4-electrode": {
+      "model_kb": 1795.859375,
+      "inference_ms_per_window": 0.031170530813957393,
+      "n_features": 40,
+      "loso_acc": 0.576986076986077
+    },
+    "full / 2-electrode": {
+      "model_kb": 3160.056640625,
+      "inference_ms_per_window": 0.05393606555232756,
+      "n_features": 20,
+      "loso_acc": 0.5941850941850941
+    },
+    "compact / 4-electrode": {
+      "model_kb": 237.1298828125,
+      "inference_ms_per_window": 0.00595872616279007,
+      "n_features": 40,
+      "loso_acc": 0.5720720720720721
+    },
+    "compact / 2-electrode": {
+      "model_kb": 191.52734375,
+      "inference_ms_per_window": 0.004931065915699522,
+      "n_features": 20,
+      "loso_acc": 0.5786240786240786
+    }
+  }
+}

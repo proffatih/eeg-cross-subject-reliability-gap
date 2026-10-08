@@ -1,66 +1,66 @@
 """
-Subject-aware evaluation of EEG mental-state (affective) classification on the
-open Bird et al. (2018) Muse dataset (4 subjects, 3 states).
+Evaluation core shared by every script: the two decoders, the two evaluation
+protocols and the metrics.
 
-Two protocols:
-  WITHIN  : stratified group K-fold pooling all subjects, but with epochs grouped
-            by recording so that windows from the same recording never straddle
-            the train/test split (prevents within-recording leakage). This is the
-            optimistic "subjects seen in training" setting.
-  LOSO    : leave-one-subject-out; the test subject is entirely unseen. This is the
-            honest cross-subject generalization setting.
+Decoders
+  GBM : histogram-based gradient-boosted trees (300 iterations, learning rate
+        0.08). At this data size it has no random element (no early stopping,
+        no feature or bin subsampling), so it is run once.
+  MLP : multilayer perceptron, two hidden layers of 128 and 64 ReLU units and a
+        softmax output, Adam, early stopping on a 10% validation split. Its
+        results are averaged over the fixed seeds in SEEDS, which set the initial
+        weights, the validation split and the mini-batch order.
 
-Models:
-  GBM : HistGradientBoostingClassifier (strong gradient-boosted tabular baseline)
-  MLP : multilayer perceptron (scikit-learn MLPClassifier, two hidden layers)
-        on standardized features
+Protocols
+  LOSO    : leave-one-subject-out; the test subject is entirely unseen.
+  SESSION : within-subject, leave-one-session-out. Each of the 8 folds holds out
+            one session of one subject (its relaxed, neutral and concentrating
+            recordings) and trains on everything else, including that subject's
+            other session. The folds are fixed, so the result is identical on
+            every machine.
 
-Metrics (per protocol, per model, averaged over SEEDS):
-  accuracy, macro-F1, and Expected Calibration Error (ECE, 15 bins).
-We also dump a pooled confusion matrix and reliability-curve data for the figures.
+Metrics: accuracy, macro-F1 and Expected Calibration Error (ECE, 15 bins).
+
+  python experiment.py   ->  results/metrics.csv, results/per_group.csv,
+                             results/confusion_gbm.json
 """
-import os, json, numpy as np, pandas as pd
+import os, json
+import numpy as np, pandas as pd
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RESULTS = os.path.join(HERE, "..", "results")
 os.makedirs(RESULTS, exist_ok=True)
-SEEDS = [0, 1, 2, 3, 4]
+SEEDS = [0, 1, 2, 3, 4]          # fixed in advance; the best seed is never selected
 N_BINS = 15
+N_CLS = 3
 LABEL_NAMES = ["relaxed", "neutral", "concentrating"]
 
 
 # ----------------------------- metrics -------------------------------------
 def ece(probs, labels, n_bins=N_BINS):
+    """Expected Calibration Error with equal-width confidence bins."""
     conf = probs.max(1)
-    pred = probs.argmax(1)
-    acc = (pred == labels).astype(float)
+    acc = (probs.argmax(1) == labels).astype(float)
     bins = np.linspace(0, 1, n_bins + 1)
     e = 0.0
     for i in range(n_bins):
         m = (conf > bins[i]) & (conf <= bins[i + 1])
         if m.sum() > 0:
-            e += (m.mean()) * abs(acc[m].mean() - conf[m].mean())
+            e += m.mean() * abs(acc[m].mean() - conf[m].mean())
     return e
 
 
-def reliability(probs, labels, n_bins=N_BINS):
-    conf = probs.max(1); pred = probs.argmax(1)
-    acc = (pred == labels).astype(float)
-    bins = np.linspace(0, 1, n_bins + 1)
-    xs, ys, ws = [], [], []
-    for i in range(n_bins):
-        m = (conf > bins[i]) & (conf <= bins[i + 1])
-        if m.sum() > 0:
-            xs.append(conf[m].mean()); ys.append(acc[m].mean()); ws.append(m.mean())
-    return np.array(xs), np.array(ys), np.array(ws)
+def scores(P, Y):
+    pred = P.argmax(1)
+    return dict(acc=accuracy_score(Y, pred), f1=f1_score(Y, pred, average="macro"),
+                ece=float(ece(P, Y)))
 
 
-# ----------------------------- models --------------------------------------
+# ----------------------------- decoders ------------------------------------
 def _align(probs, classes_, n_cls, n):
     """Map a classifier's predict_proba columns onto the full class set."""
     full = np.zeros((n, n_cls))
@@ -69,7 +69,8 @@ def _align(probs, classes_, n_cls, n):
     return full
 
 
-def fit_predict(model_name, Xtr, ytr, Xte, seed, n_cls):
+def fit_predict(model_name, Xtr, ytr, Xte, seed, n_cls=N_CLS):
+    """Standardise with training statistics, fit, return test probabilities."""
     sc = StandardScaler().fit(Xtr)
     Xtr_s, Xte_s = sc.transform(Xtr), sc.transform(Xte)
     if model_name == "GBM":
@@ -85,103 +86,93 @@ def fit_predict(model_name, Xtr, ytr, Xte, seed, n_cls):
 
 
 # ----------------------------- protocols -----------------------------------
-def run_within(X, y, rec, model_name, seed, n_cls):
-    """Stratified group K-fold; groups = recordings (no within-recording leak)."""
-    gkf = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=seed)
-    all_p, all_y = [], []
-    for tr, te in gkf.split(X, y, groups=rec):
-        p = fit_predict(model_name, X[tr], y[tr], X[te], seed, n_cls)
-        all_p.append(p); all_y.append(y[te])
-    P = np.vstack(all_p); Y = np.concatenate(all_y)
-    return P, Y
-
-
-def run_loso(X, y, subj, model_name, seed, n_cls):
+def run_loso(X, y, subj, model_name, seed, n_cls=N_CLS):
+    """Leave-one-subject-out; predictions pooled in sorted-subject order."""
     all_p, all_y = [], []
     for s in sorted(set(subj.tolist())):
-        te = subj == s; tr = ~te
-        p = fit_predict(model_name, X[tr], y[tr], X[te], seed, n_cls)
-        all_p.append(p); all_y.append(y[te])
-    P = np.vstack(all_p); Y = np.concatenate(all_y)
-    return P, Y
+        te = subj == s
+        all_p.append(fit_predict(model_name, X[~te], y[~te], X[te], seed, n_cls))
+        all_y.append(y[te])
+    return np.vstack(all_p), np.concatenate(all_y)
+
+
+def loso_groups(subj):
+    """Subject label of every pooled LOSO prediction (same order as run_loso)."""
+    return np.concatenate([np.full(int((subj == s).sum()), s) for s in sorted(set(subj.tolist()))])
+
+
+def run_loso_train_test(Xtr, ytr, str_, Xte, yte, ste, model_name, seed, n_cls=N_CLS):
+    """LOSO with separate training and test sets (e.g. trained on clean
+    recordings, tested on degraded ones): fold s trains on Xtr without subject s
+    and tests on Xte of subject s."""
+    all_p, all_y = [], []
+    for s in sorted(set(str_.tolist())):
+        all_p.append(fit_predict(model_name, Xtr[str_ != s], ytr[str_ != s],
+                                 Xte[ste == s], seed, n_cls))
+        all_y.append(yte[ste == s])
+    return np.vstack(all_p), np.concatenate(all_y)
+
+
+def run_session(X, y, subj, rec, model_name, seed, n_cls=N_CLS):
+    """Within-subject leave-one-session-out (8 fixed folds)."""
+    sess = np.array([r.split("-")[-1] for r in rec])
+    all_p, all_y, groups = [], [], []
+    for s in sorted(set(subj.tolist())):
+        for k in sorted(set(sess.tolist())):
+            te = (subj == s) & (sess == k)
+            all_p.append(fit_predict(model_name, X[~te], y[~te], X[te], seed, n_cls))
+            all_y.append(y[te]); groups.append(np.full(int(te.sum()), f"{s}{k}"))
+    return np.vstack(all_p), np.concatenate(all_y), np.concatenate(groups)
+
+
+def evaluate(X, y, subj, model_name, protocol="loso", rec=None, test=None):
+    """Accuracy, macro-F1 and ECE (mean and s.d. over seeds) and per-group
+    accuracy. GBM is deterministic here and is run once (seed 0); the MLP is
+    run for every seed in SEEDS. test=(Xte, yte, ste) trains on (X, y, subj)
+    and tests on the given set, subject by subject."""
+    seeds = [0] if model_name == "GBM" else SEEDS
+    runs, per = [], []
+    for seed in seeds:
+        if test is not None:
+            P, Y = run_loso_train_test(X, y, subj, *test, model_name, seed)
+            G = loso_groups(test[2])
+        elif protocol == "loso":
+            P, Y = run_loso(X, y, subj, model_name, seed)
+            G = loso_groups(subj)
+        else:
+            P, Y, G = run_session(X, y, subj, rec, model_name, seed)
+        runs.append(scores(P, Y))
+        per.append({g: accuracy_score(Y[G == g], P[G == g].argmax(1)) for g in sorted(set(G.tolist()))})
+    out = {k: float(np.mean([r[k] for r in runs])) for k in ["acc", "f1", "ece"]}
+    out.update({k + "_sd": float(np.std([r[k] for r in runs])) for k in ["acc", "f1", "ece"]})
+    out["n_seeds"] = len(seeds)
+    out["per_group"] = pd.DataFrame(per).mean().to_dict()
+    return out
 
 
 # ----------------------------- main ----------------------------------------
 def main():
     d = np.load(os.path.join(HERE, "..", "data", "features.npz"), allow_pickle=True)
     X, y, subj, rec = d["X"], d["y"], d["subj"], d["rec"]
-    n_cls = len(LABEL_NAMES)
     print(f"Loaded X={X.shape}, subjects={sorted(set(subj.tolist()))}")
-
-    rows = []
-    # store pooled preds (seed 0) for confusion + reliability figures
-    store = {}
-    for model_name in ["GBM", "MLP"]:
-        for proto, fn in [("within", run_within), ("loso", run_loso)]:
-            accs, f1s, eces = [], [], []
-            for seed in SEEDS:
-                if proto == "within":
-                    P, Y = run_within(X, y, rec, model_name, seed, n_cls)
-                else:
-                    P, Y = run_loso(X, y, subj, model_name, seed, n_cls)
-                pred = P.argmax(1)
-                accs.append(accuracy_score(Y, pred))
-                f1s.append(f1_score(Y, pred, average="macro"))
-                eces.append(ece(P, Y))
-                if seed == 0:
-                    store[(model_name, proto)] = (P, Y)
-            rows.append(dict(model=model_name, protocol=proto,
-                             acc_mean=np.mean(accs), acc_std=np.std(accs),
-                             f1_mean=np.mean(f1s), f1_std=np.std(f1s),
-                             ece_mean=np.mean(eces), ece_std=np.std(eces),
-                             n_seeds=len(SEEDS)))
-            print(f"{model_name:4s} {proto:7s} acc={np.mean(accs):.3f}"
-                  f"+-{np.std(accs):.3f}  f1={np.mean(f1s):.3f}  ece={np.mean(eces):.3f}")
-
-    df = pd.DataFrame(rows)
-    df.to_csv(os.path.join(RESULTS, "metrics.csv"), index=False)
-
-    # generalization gap table
-    gap = []
-    for model_name in ["GBM", "MLP"]:
-        w = df[(df.model == model_name) & (df.protocol == "within")].iloc[0]
-        l = df[(df.model == model_name) & (df.protocol == "loso")].iloc[0]
-        gap.append(dict(model=model_name,
-                        within_acc=w.acc_mean, loso_acc=l.acc_mean,
-                        acc_gap=w.acc_mean - l.acc_mean,
-                        within_f1=w.f1_mean, loso_f1=l.f1_mean,
-                        f1_gap=w.f1_mean - l.f1_mean))
-    pd.DataFrame(gap).to_csv(os.path.join(RESULTS, "generalization_gap.csv"), index=False)
-
-    # per-subject LOSO accuracy (best model = GBM, seed 0..4 averaged)
-    persubj = []
-    for s in sorted(set(subj.tolist())):
-        for model_name in ["GBM", "MLP"]:
-            a = []
-            for seed in SEEDS:
-                te = subj == s; tr = ~te
-                p = fit_predict(model_name, X[tr], y[tr], X[te], seed, n_cls)
-                a.append(accuracy_score(y[te], p.argmax(1)))
-            persubj.append(dict(subject=s, model=model_name,
-                                loso_acc_mean=np.mean(a), loso_acc_std=np.std(a)))
-    pd.DataFrame(persubj).to_csv(os.path.join(RESULTS, "per_subject_loso.csv"), index=False)
-
-    # dump arrays for figures (confusion + reliability), seed 0
-    np.savez_compressed(os.path.join(RESULTS, "fig_arrays.npz"),
-                        **{f"{m}_{p}_P": store[(m, p)][0] for m in ["GBM", "MLP"] for p in ["within", "loso"]},
-                        **{f"{m}_{p}_Y": store[(m, p)][1] for m in ["GBM", "MLP"] for p in ["within", "loso"]})
-
-    # confusion matrices (GBM, both protocols)
+    rows, per = [], []
+    for model in ["GBM", "MLP"]:
+        for protocol in ["session", "loso"]:
+            r = evaluate(X, y, subj, model, protocol, rec)
+            rows.append(dict(model=model, protocol=protocol, n_seeds=r["n_seeds"],
+                             **{k: r[k] for k in ["acc", "acc_sd", "f1", "f1_sd", "ece", "ece_sd"]}))
+            per += [dict(model=model, protocol=protocol, group=g, acc=a) for g, a in r["per_group"].items()]
+            print(f"{model} {protocol:<7} acc={r['acc']:.3f}+-{r['acc_sd']:.3f}  "
+                  f"f1={r['f1']:.3f}  ece={r['ece']:.3f}")
+    pd.DataFrame(rows).to_csv(os.path.join(RESULTS, "metrics.csv"), index=False)
+    pd.DataFrame(per).to_csv(os.path.join(RESULTS, "per_group.csv"), index=False)
     cms = {}
-    for proto in ["within", "loso"]:
-        P, Y = store[("GBM", proto)]
-        cm = confusion_matrix(Y, P.argmax(1), labels=[0, 1, 2])
-        cms[proto] = cm.tolist()
+    for protocol in ["session", "loso"]:
+        out = run_loso(X, y, subj, "GBM", 0) if protocol == "loso" else run_session(X, y, subj, rec, "GBM", 0)
+        cms[protocol] = confusion_matrix(out[1], out[0].argmax(1), labels=[0, 1, 2]).tolist()
     with open(os.path.join(RESULTS, "confusion_gbm.json"), "w") as f:
         json.dump(cms, f, indent=2)
-
-    print("\nSaved results to", RESULTS)
-    print(df.to_string(index=False))
+    print("Saved results to", os.path.abspath(RESULTS))
 
 
 if __name__ == "__main__":
