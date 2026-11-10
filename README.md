@@ -73,3 +73,43 @@ as ratios between array sizes.
 - The converter-rate test covers 256-112 Hz, all of which carry the full
   analysis band, using rational resampling.
 - `np.trapz` replaced by `np.trapezoid`; library versions pinned.
+
+## Revision, November 2026
+
+Two reviewers at *Scientific Reports* prompted a correction that changed the
+paper's conclusion, and this repository now reflects it.
+
+**The labels in this dataset are confounded with the recording session.** The
+`timestamps` column shows that in three of the four participants the
+concentrating recordings were made on a different day from the relaxed and
+neutral recordings, about 46 h later. A classifier that sees no EEG at all, only
+where a window sits in time, reaches 0.569 cross-subject accuracy against 0.333
+chance; the full decoder on notch-filtered data reaches 0.574. A 50 Hz notch
+removes one symptom, not the confound. Relaxed versus neutral, recorded in the
+same session for every participant, is still decoded above chance (0.606 and
+0.659 against 0.500), so the recordings do carry cross-subject information — far
+less than the three-class figures imply.
+
+Run `python code/session_confound.py all` to reproduce this.
+
+**Two defects in the earlier code were found by a reviewer and are fixed here.**
+
+- Band power was computed by trapezoidal integration over the bins of a band.
+  For a band holding a single bin this returns exactly zero, which silently
+  deleted the delta feature whenever the grid spacing reached 2 Hz (any 0.5 s
+  window). Band power is now the sum of the in-band bins times the bin width,
+  and the Welch segment is one second of data wherever the window allows, so the
+  frequency grid no longer changes with the sampling rate.
+- Inference latency was timed in batch and divided by the batch size, then
+  compared against per-window feature extraction. Both are now measured the same
+  way: inference costs 0.026 ms per window in batch (n = 688) but 3.96 ms one
+  window at a time, against 2.91 ms for feature extraction. The earlier
+  conclusion that feature extraction sets the compute budget does not hold for a
+  node that classifies as the data arrive.
+
+All results in `results/` were regenerated with the corrected pipeline. The
+headline three-class figure moved from 0.577 to 0.574.
+
+**The electrode, interference, converter-rate and window comparisons are kept
+for completeness but are scored against the confounded label.** They describe
+this dataset; they are not hardware guidance.

@@ -296,9 +296,17 @@ def _feat_latency(n_ch, reps=300):
 
 
 def s4_compute_budget(pair):
-    """Feature-extraction time scales with the electrode count; inference is
-    timed in batch and divided by the number of windows. Single-threaded on
-    the host CPU: a relative budget between array sizes, not an MCU figure."""
+    """Feature-extraction and inference latency for an n_ch array.
+
+    After review, inference is reported two ways on the same data, because the
+    two are not interchangeable and the earlier version compared per-window
+    feature extraction against batch inference divided by the batch size:
+      batch   : one predict_proba call over the whole test fold, divided by the
+                number of windows (the batch size is recorded)
+      single  : one predict_proba call per window, which is what a node that
+                classifies as the data arrives actually pays.
+    Single-threaded on the host CPU: a relative budget between array sizes, not
+    a microcontroller figure."""
     from sklearn.ensemble import HistGradientBoostingClassifier
     from sklearn.preprocessing import StandardScaler
     from threadpoolctl import threadpool_limits
@@ -320,9 +328,19 @@ def s4_compute_budget(pair):
                 t0 = time.perf_counter()
                 for _ in range(20):
                     clf.predict_proba(Z)
+                batch_ms = (time.perf_counter() - t0) / (20 * len(Z)) * 1e3
+                one = Z[:1]
+                for _ in range(20):
+                    clf.predict_proba(one)
+                t0 = time.perf_counter()
+                for _ in range(200):
+                    clf.predict_proba(one)
+                single_ms = (time.perf_counter() - t0) / 200 * 1e3
                 out["decoders"][f"{cfg_name} / {tag}"] = dict(
                     model_kb=len(pickle.dumps(clf)) / 1024.0,
-                    inference_ms_per_window=(time.perf_counter() - t0) / (20 * len(Z)) * 1e3,
+                    inference_ms_per_window_batch=batch_ms,
+                    inference_ms_per_window_single=single_ms,
+                    batch_size=int(len(Z)),
                     n_features=int(Xs.shape[1]),
                     loso_acc=loso_custom(Xs, y, subj, lambda: HistGradientBoostingClassifier(random_state=0, **kw)))
                 print(f"  S4 {cfg_name:<8} {tag:<12} {out['decoders'][f'{cfg_name} / {tag}']}", flush=True)

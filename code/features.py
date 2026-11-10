@@ -68,13 +68,22 @@ def _window_features(seg):
     for c in range(seg.shape[1]):
         x = seg[:, c]
         x = x - np.mean(x)
-        # Welch PSD -> band powers
-        nper = min(len(x), 256)
+        # Welch PSD -> band powers.
+        #
+        # Two corrections after review. (i) The segment is one second of data
+        # wherever the window allows it, so the frequency grid does not change
+        # with the sampling rate. (ii) Band power is the sum of the bins whose
+        # centres fall in the band, times the bin width, rather than a
+        # trapezoidal integral: with a 0.5 s window the grid spacing is 2 Hz and
+        # the delta band holds a single bin, for which the trapezoidal rule
+        # returns exactly zero and silently deletes the feature.
+        nper = min(len(x), int(round(FS)))
         f, pxx = welch(x, fs=FS, nperseg=nper)
-        total = np.trapezoid(pxx, f) + 1e-12
+        df = f[1] - f[0]
+        total = pxx.sum() * df + 1e-12
         for (lo, hi) in BANDS.values():
             idx = (f >= lo) & (f < hi)
-            bp = np.trapezoid(pxx[idx], f[idx]) if idx.any() else 0.0
+            bp = pxx[idx].sum() * df if idx.any() else 0.0
             feats.append(bp / total)                      # relative band power
         # time-domain stats
         feats.append(np.std(x))
