@@ -1,0 +1,25 @@
+{
+  "spearman_time_vs_mains_day1": {
+    "rho": 0.5622482267760789,
+    "p": 0.015152108373745714,
+    "n": 18
+  },
+  "spearman_time_vs_mains_day1_within_participant": {
+    "rho": 0.513993541442411,
+    "p": 0.0291031137027073
+  },
+  "day_step_log10_uV2": {
+    "per_participant": [
+      2.4493800594619497,
+      2.714869881382537,
+      2.359760313726988
+    ],
+    "mean": 2.5080034181904916,
+    "in_dB": 25.080034181904914
+  },
+  "participant_c_same_day": {
+    "concentrating": 2.549410044476086,
+    "other": 1.968295298865364,
+    "difference_in_dB": 5.81114745610722
+  }
+}

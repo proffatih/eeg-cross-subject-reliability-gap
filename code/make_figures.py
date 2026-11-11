@@ -144,6 +144,10 @@ def fig2():
 # ---------------------------------------------------------------- Fig. 3
 def fig3():
     n = pd.read_csv(os.path.join(R, "sensor_noise_faults.csv"))
+    # the degradations are now scored with both decoders; the panels show the
+    # gradient-boosted one, and the multilayer perceptron is reported in the text
+    if "model" in n.columns:
+        n = n[n.model == "GBM"]
     clean = n[n.degradation == "none"].acc.iloc[0]
     fig, ax = plt.subplots(2, 2, figsize=(COL, 2.75))
     a, b, c, w = ax[0, 0], ax[0, 1], ax[1, 0], ax[1, 1]
@@ -207,7 +211,7 @@ def table2():
         for tag in ["4-electrode", "2-electrode"]:
             r = j["decoders"][f"{cfg} / {tag}"]
             t.append(f"{cfg.capitalize()}, {tag[0]} contacts & {r['model_kb']:.0f} & "
-                     f"{1000 * r['inference_ms_per_window']:.1f} & {r['loso_acc']:.3f} \\\\")
+                     f"{1000 * r['inference_ms_per_window_single']:.1f} & {r['loso_acc']:.3f} \\\\")
     t += [r"\midrule",
           r"\multicolumn{4}{l}{Feature extraction: %.1f ms (4 contacts), %.1f ms (2 contacts)} \\"
           % (fe["4-electrode"], fe["2-electrode"]),
@@ -260,5 +264,23 @@ def graphical_abstract():
     print("wrote graphical_abstract (660 x 295)")
 
 
+# figure file -> name used in the manuscript, so the renaming is not done by hand
+PUBLISHED = {"fig1_electrodes": "Figure2_electrodes",
+             "fig2_mains": "Figure1_mains",
+             "fig3_sensor": "Figure3_budget"}
+M = os.path.join(HERE, "..", "manuscript")
+os.makedirs(M, exist_ok=True)
+
+
+def publish():
+    import shutil
+    for src, dst in PUBLISHED.items():
+        for ext in ("pdf", "png"):
+            a = os.path.join(FG, f"{src}.{ext}")
+            if os.path.exists(a):
+                shutil.copyfile(a, os.path.join(M, f"{dst}.{ext}"))
+    print("copied figures to manuscript/ under their published names")
+
+
 if __name__ == "__main__":
-    fig1(); fig2(); fig3(); table1(); table2(); graphical_abstract()
+    fig1(); fig2(); fig3(); table1(); table2(); graphical_abstract(); publish()

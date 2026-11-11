@@ -2,33 +2,41 @@
   "window_s": 1.0,
   "pair": "TP9+TP10",
   "feature_extraction_ms": {
-    "4-electrode": 4.180119976666674,
-    "2-electrode": 1.7156315633333936
+    "4-electrode": 3.035382619127631,
+    "2-electrode": 1.5153309485564628
   },
   "decoders": {
     "full / 4-electrode": {
-      "model_kb": 1795.859375,
-      "inference_ms_per_window": 0.031170530813957393,
+      "model_kb": 1792.6962890625,
+      "inference_ms_per_window_batch": 0.032397392300650654,
+      "inference_ms_per_window_single": 4.403247809968889,
+      "batch_size": 688,
       "n_features": 40,
-      "loso_acc": 0.576986076986077
+      "loso_acc": 0.5741195741195741
     },
     "full / 2-electrode": {
       "model_kb": 3160.056640625,
-      "inference_ms_per_window": 0.05393606555232756,
+      "inference_ms_per_window_batch": 0.04893151513939767,
+      "inference_ms_per_window_single": 4.403554215095937,
+      "batch_size": 688,
       "n_features": 20,
-      "loso_acc": 0.5941850941850941
+      "loso_acc": 0.592956592956593
     },
     "compact / 4-electrode": {
-      "model_kb": 237.1298828125,
-      "inference_ms_per_window": 0.00595872616279007,
+      "model_kb": 236.8017578125,
+      "inference_ms_per_window_batch": 0.005208814535614883,
+      "inference_ms_per_window_single": 0.8645186759531498,
+      "batch_size": 688,
       "n_features": 40,
-      "loso_acc": 0.5720720720720721
+      "loso_acc": 0.581081081081081
     },
     "compact / 2-electrode": {
-      "model_kb": 191.52734375,
-      "inference_ms_per_window": 0.004931065915699522,
+      "model_kb": 188.02734375,
+      "inference_ms_per_window_batch": 0.004854532253798531,
+      "inference_ms_per_window_single": 0.8485445007681847,
+      "batch_size": 688,
       "n_features": 20,
-      "loso_acc": 0.5786240786240786
+      "loso_acc": 0.5819000819000819
     }
   }
 }

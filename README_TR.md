@@ -1,4 +1,6 @@
-# İki kuru elektrot yeterli: analiz kodu
+# Dört kanallı kuru elektrotlu bir EEG kıyas setinde kayıt-oturumu confound'u
+
+Aynı adlı makalenin analiz kodu.
 
 Dört kanallı, kuru elektrotlu Muse kafa bandının (TP9, AF7, AF8, TP10), Bird ve
 arkadaşlarının (2018) açık kayıtları üzerinde kişiler arası (bir kişiyi dışarıda
@@ -79,3 +81,42 @@ anlamlıdır.
 - Dönüştürücü hızı testi, hepsi analiz bandının tamamını taşıyan 256–112 Hz
   aralığını kesirli yeniden örneklemeyle kapsıyor.
 - `np.trapz` yerine `np.trapezoid` kullanılıyor; kütüphane sürümleri sabitlendi.
+
+## Revizyon, Kasım 2026
+
+*Scientific Reports*'taki iki hakem, makalenin sonucunu değiştiren bir
+düzeltmeye yol açtı; bu depo artık onu yansıtıyor.
+
+**Bu veri setinde etiketler kayıt oturumuyla confound'lu.** `timestamps`
+sütunu, dört katılımcının üçünde konsantre kayıtlarının rahat ve nötr
+kayıtlardan **farklı bir günde** (yaklaşık 46 saat sonra) alındığını gösteriyor.
+Hiç EEG görmeyen, yalnızca pencerenin zaman içindeki yerini bilen bir
+sınıflandırıcı 0.333 şans düzeyine karşı **0.569** kişiler-arası doğruluğa
+ulaşıyor; çentik süzgeçli veriyle tam dekoder **0.574**. 50 Hz çentiği bir
+belirtiyi siliyor, confound'u değil. Her katılımcıda aynı oturumda kaydedilmiş
+olan rahat–nötr karşılaştırması hâlâ şansın üstünde (0.500'e karşı 0.606 ve
+0.659), yani kayıtlar kişiler-arası bilgi taşıyor — üç sınıflı rakamların ima
+ettiğinden çok daha azını.
+
+Yeniden üretmek için: `python code/session_confound.py all`
+
+**Hakemlerin istediği ek çözümlemeler** (`code/reviewer_followups.py`):
+
+- **Artefakt-only dekoder.** Yalnız 50 Hz gücü, DC ofseti ve 55–128 Hz gücü —
+  hiçbiri 1–45 Hz bant geçirenden sağ çıkmıyor — aynı LOSO katlarında **0.761**
+  veriyor, yani bant-içi tam dekoderden **19 puan yüksek**. Denek bazında
+  0.839 / 0.993 / 0.372 / 0.838: gün ayrımı olan üç denek neredeyse kusursuz,
+  ayrımı olmayan denek c şans düzeyinde.
+- **Tahmin karşılaştırması.** Bant-içi dekoder ile artefakt-only dekoder
+  pencerelerin 0.600'ünde aynı sınıfı veriyor (κ = 0.36; bağımsız iki dekoder
+  için beklenen uyuşma 0.336).
+- **50 Hz gücü ↔ zaman.** İlk gün içinde çizgi düzeyi kayıt saatiyle birlikte
+  yükseliyor (Spearman ρ = 0.56, p = 0.015, n = 18); gün sınırında ortalama
+  **+25.1 dB** sıçrıyor; gün ayrımı olmayan denek c'de konsantre kayıtları
+  diğerlerinden yalnız 5.8 dB yukarıda.
+
+**Hakemin bulduğu iki kod hatası düzeltildi** (ayrıntı İngilizce README'de).
+
+**Elektrot, girişim, dönüştürücü hızı ve pencere karşılaştırmaları** eksiksizlik
+için duruyor ama confound'lu etikete karşı puanlanmış durumda. Bu veri setini
+anlatıyorlar; donanım tavsiyesi değiller.

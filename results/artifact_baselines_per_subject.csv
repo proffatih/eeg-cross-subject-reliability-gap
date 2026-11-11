@@ -1,0 +1,4 @@
+check,a,b,c,d
+50 Hz power only (positive control),0.817,0.966,0.347,0.925
+"55-128 Hz broadband, lines excluded (negative)",0.788,0.819,0.317,0.738
+DC offset only (negative control),0.509,0.603,0.306,0.314

@@ -207,7 +207,11 @@ def dropout():
     return f
 
 
-def s2_noise_faults(names=None, out="sensor_noise_faults.csv"):
+def s2_noise_faults(names=None, out="sensor_noise_faults.csv",
+                    models=("GBM",), n_rep=N_REP):
+    """Reviewer 2.4 asked for more noise realisations and for both decoders, so
+    the number of realisations and the decoder list are arguments; each
+    realisation is extracted once and scored with every decoder."""
     p = noise_reference()
     sd = lambda snr: np.sqrt(p / 10 ** (snr / 10.0))
     grid = [("white noise", snr, f"{snr} dB SNR", white_noise(sd(snr))) for snr in [20, 10, 5, 0]]
@@ -218,18 +222,27 @@ def s2_noise_faults(names=None, out="sensor_noise_faults.csv"):
     Xc, yc, sc = load_base()
     rows = []
     if names is None or "none" in names:
-        r = evaluate(Xc, yc, sc, "GBM")
-        rows.append(dict(degradation="none", level="clean", snr_db=np.nan, n_rep=1,
-                         acc=r["acc"], acc_sd=0.0, f1=r["f1"], ece=r["ece"], ece_sd=0.0))
+        for m in models:
+            r = evaluate(Xc, yc, sc, m)
+            rows.append(dict(degradation="none", level="clean", snr_db=np.nan,
+                             model=m, n_rep=1, acc=r["acc"], acc_sd=0.0,
+                             f1=r["f1"], ece=r["ece"], ece_sd=0.0))
     for name, snr, level, fn in grid:
         if names is not None and name not in names:
             continue
-        reps = [evaluate(Xc, yc, sc, "GBM", test=extract(perturb=fn, seed=rep)) for rep in range(N_REP)]
-        rows.append(dict(degradation=name, level=level, snr_db=snr, n_rep=N_REP,
-                         acc=np.mean([r["acc"] for r in reps]), acc_sd=np.std([r["acc"] for r in reps]),
-                         f1=np.mean([r["f1"] for r in reps]), ece=np.mean([r["ece"] for r in reps]),
-                         ece_sd=np.std([r["ece"] for r in reps])))
-        print(f"  S2 {name:<20} {level:<15} acc={rows[-1]['acc']:.3f}+-{rows[-1]['acc_sd']:.3f}", flush=True)
+        per = {m: [] for m in models}
+        for rep in range(n_rep):
+            deg = extract(perturb=fn, seed=rep)
+            for m in models:
+                per[m].append(evaluate(Xc, yc, sc, m, test=deg))
+        for m in models:
+            reps = per[m]
+            rows.append(dict(degradation=name, level=level, snr_db=snr, model=m,
+                             n_rep=n_rep,
+                             acc=np.mean([r["acc"] for r in reps]), acc_sd=np.std([r["acc"] for r in reps]),
+                             f1=np.mean([r["f1"] for r in reps]), ece=np.mean([r["ece"] for r in reps]),
+                             ece_sd=np.std([r["ece"] for r in reps])))
+            print(f"  S2 {name:<20} {level:<15} {m} acc={rows[-1]['acc']:.3f}+-{rows[-1]['acc_sd']:.3f}", flush=True)
     df = pd.DataFrame(rows)
     if out:
         df.to_csv(os.path.join(RESULTS, out), index=False)

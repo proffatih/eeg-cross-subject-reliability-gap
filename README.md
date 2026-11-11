@@ -1,4 +1,6 @@
-# Two dry electrodes suffice: analysis code
+# A recording-session confound in a four-channel dry-electrode EEG benchmark
+
+Analysis code for the manuscript of the same name.
 
 Cross-subject (leave-one-subject-out) characterisation of a four-channel
 dry-electrode Muse headband (TP9, AF7, AF8, TP10) on the open recordings of
@@ -21,15 +23,19 @@ All scripts are run from `code/`; results are written to `results/`.
 
 | Script | What it does | Outputs | Paper | Time* |
 |---|---|---|---|---|
-| `verify_sampling_rate.py` | Sampling rate from timestamps; lists recordings with timestamp gaps | screen | Sec. II | s |
-| `features.py` | Splits recordings at gaps, 50 Hz notch + 1-45 Hz band-pass, 1 s windows (50% overlap), 10 features per contact | `data/features.npz` | Sec. II | 15 s |
-| `experiment.py` | GBM and MLP, within-subject (leave-one-session-out) and LOSO | `metrics.csv`, `per_group.csv`, `confusion_gbm.json` | Sec. II | 1 min |
-| `confound_checks.py` | Notch vs no notch; 50 Hz-only, DC-only and broadband controls; line prominence; extra notches; causal filters; 1-20 Hz | `confound_*.csv` | Mains section | 4 min |
-| `sensor_experiments.py s1` | All 15 electrode subsets, GBM and MLP | `sensor_electrode_subsets.csv`, `..._per_subject.csv` | Sec. III | 4 min |
-| `sensor_experiments.py s2` | Noise and contact faults (absolute noise level; trained clean, tested degraded) | `sensor_noise_faults.csv`, `noise_reference.json` | Sec. IV | 11 min |
-| `sensor_experiments.py s3` | Converter rate 256-112 Hz | `sensor_rate.csv` | Sec. V | 2 min |
-| `sensor_experiments.py s3w` | Decision window 2, 1, 0.5 s at 256 and 112 Hz | `sensor_window.csv` | Sec. V | 3 min |
-| `sensor_experiments.py s4` | Feature-extraction and inference time, model size | `sensor_compute_budget.json` | Sec. V | 1 min |
+| `verify_sampling_rate.py` | Sampling rate from timestamps; lists recordings with timestamp gaps | screen | Methods | s |
+| `features.py` | Splits recordings at gaps, 50 Hz notch + 1-45 Hz band-pass, 1 s windows (50% overlap), 10 features per contact | `data/features.npz` | Methods | 15 s |
+| `experiment.py` | GBM and MLP, within-subject (leave-one-session-out) and LOSO | `metrics.csv`, `per_group.csv`, `confusion_gbm.json` | Methods | 1 min |
+| `confound_checks.py` | Notch vs no notch; 50 Hz-only, DC-only and broadband controls; line prominence; extra notches; causal filters; 1-20 Hz | `confound_*.csv` | Results | 4 min |
+| `sensor_experiments.py s1` | All 15 electrode subsets, GBM and MLP | `sensor_electrode_subsets.csv`, `..._per_subject.csv` | Results | 4 min |
+| `sensor_experiments.py s2` | Noise and contact faults (absolute noise level; trained clean, tested degraded) | `sensor_noise_faults.csv`, `noise_reference.json` | Results | 11 min |
+| `sensor_experiments.py s3` | Converter rate 256-112 Hz | `sensor_rate.csv` | Results | 2 min |
+| `sensor_experiments.py s3w` | Decision window 2, 1, 0.5 s at 256 and 112 Hz | `sensor_window.csv` | Results | 3 min |
+| `sensor_experiments.py s4` | Feature-extraction and inference time, model size | `sensor_compute_budget.json` | Results | 1 min |
+| `session_confound.py` | Recording times; day split; split vs accuracy; relaxed-vs-neutral; clock-only baseline | `session_*.csv`, `time_only_baseline.json`, `within_session_*.csv` | Results, Fig. 1 | 2 min |
+| `reviewer_followups.py` | 50 Hz power vs time; artifact-only decoder; prediction agreement; per-subject artifact baselines | `mains_vs_time*.{csv,json}`, `artifact_model_*.{csv,json}`, `artifact_baselines_per_subject.csv` | Results | 3 min |
+| `make_session_figure.py` | Figure 1 (session confound) | `manuscript/Figure1_session.pdf` | Fig. 1 | 10 s |
+| `make_tables.py` | Tables 3 and 4 straight from the result files | `manuscript/tab_*.tex` | Tables 3-4 | s |
 | `make_figures.py` | Figures 1-3, Tables 1-2 and the graphical abstract | `figures/` | all | 30 s |
 | `sensor_experiments.py s3c` | Optional: band-controlled rate test (identical content at every rate) | `sensor_rate_band_controlled.csv` | reply to reviewers | 2 min |
 
@@ -58,9 +64,9 @@ as ratios between array sizes.
 
 ## Changes from the original pipeline
 
-- 50 Hz notch before the band-pass. The recordings contain state-dependent
+- 50 Hz notch before the band-pass. The recordings contain session-correlated
   mains pickup; without the notch it reaches the features through the gentle
-  order-4 band edge and inflates cross-subject accuracy from 0.58 to 0.78.
+  order-4 band edge and inflates cross-subject accuracy from 0.57 to 0.78.
 - Recordings are split at timestamp gaps longer than 0.1 s
   (`subjectb-relaxed-2` consists of ten 3-4.5 s pieces); 2442 windows.
 - The window mean (always zero after centring) and RMS (equal to the standard
@@ -92,6 +98,23 @@ less than the three-class figures imply.
 
 Run `python code/session_confound.py all` to reproduce this.
 
+**Three further analyses were run at the reviewers' request**
+(`python code/reviewer_followups.py all`).
+
+- *Artifact-only decoder.* The 50 Hz power, the DC offset and the 55-128 Hz
+  power of each contact — twelve numbers, none of which survives the 1-45 Hz
+  band-pass — reach **0.761** under the same leave-one-subject-out folds, i.e.
+  nineteen points above the full in-band decoder. Per participant: 0.839, 0.993,
+  0.372, 0.838; the three with the day split are decoded almost perfectly and
+  the one without it at chance.
+- *Prediction comparison.* The in-band decoder and the artifact-only decoder
+  give the same class on 0.600 of the windows (kappa 0.36) against the 0.336
+  expected of two independent decoders at these class frequencies.
+- *50 Hz power against time.* Within the first day the line level rises with
+  the time at which a recording was made (Spearman rho 0.56, p 0.015, n 18);
+  at the day boundary it steps by +25.1 dB; in the participant without a split
+  the concentrating recordings sit only 5.8 dB above the rest.
+
 **Two defects in the earlier code were found by a reviewer and are fixed here.**
 
 - Band power was computed by trapezoidal integration over the bins of a band.
@@ -102,8 +125,8 @@ Run `python code/session_confound.py all` to reproduce this.
   frequency grid no longer changes with the sampling rate.
 - Inference latency was timed in batch and divided by the batch size, then
   compared against per-window feature extraction. Both are now measured the same
-  way: inference costs 0.026 ms per window in batch (n = 688) but 3.96 ms one
-  window at a time, against 2.91 ms for feature extraction. The earlier
+  way: inference costs 0.032 ms per window in batch (n = 688) but 4.40 ms one
+  window at a time, against 3.04 ms for feature extraction. The earlier
   conclusion that feature extraction sets the compute budget does not hold for a
   node that classifies as the data arrive.
 

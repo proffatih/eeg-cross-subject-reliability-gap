@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 HERE = os.path.dirname(os.path.abspath(__file__))
 R = os.path.join(HERE, "..", "results")
 FG = os.path.join(HERE, "..", "manuscript")
+os.makedirs(FG, exist_ok=True)
 try:
     import sys; sys.path.insert(0, "/home/pardus/Papers/_templates")
     from pro_style import apply as _pa; _pa()
@@ -54,19 +55,22 @@ ax.legend(handles=h, fontsize=6.8, loc="center right", frameon=False)
 ax.set_title("a   when each recording was made", fontsize=8.6, loc="left",
              weight="bold")
 
-# ---- (b) EEG-free baseline --------------------------------------------------
+# ---- (b) decoders that see no in-band EEG -----------------------------------
 ax = fig.add_axes([0.605, 0.575, 0.355, 0.345])
-vals = [tonly["time_only_loso_acc"], gbm_notch]
-labs = ["time only\n(no EEG)", "full decoder\n(notched EEG)"]
-ax.bar([0, 1], vals, color=[ORANGE, NAVY], width=0.58)
-for x, v in zip([0, 1], vals):
-    ax.text(x, v + 0.012, f"{v:.3f}", ha="center", fontsize=8.5, weight="bold")
+art = pd.read_csv(os.path.join(R, "artifact_model_accuracy.csv")).set_index("model")
+art_acc = float(art.loc["artifact only (50 Hz + DC + 55-128 Hz)", "acc"])
+vals = [tonly["time_only_loso_acc"], gbm_notch, art_acc]
+labs = ["clock only\n(no EEG)", "full decoder\n(notched EEG)",
+        "artifacts only\n(no in-band EEG)"]
+ax.bar([0, 1, 2], vals, color=[ORANGE, NAVY, RED], width=0.6)
+for x, v in zip([0, 1, 2], vals):
+    ax.text(x, v + 0.014, f"{v:.3f}", ha="center", fontsize=8.2, weight="bold")
 ax.axhline(1/3, ls=":", color=GREY, lw=1.1)
-ax.text(1.42, 1/3 + 0.008, "chance", fontsize=7, color=GREY, ha="right")
-ax.set_xticks([0, 1]); ax.set_xticklabels(labs, fontsize=7.6)
-ax.set_ylim(0, 0.70); ax.set_ylabel("LOSO accuracy", fontsize=8)
+ax.text(2.45, 1/3 + 0.01, "chance", fontsize=7, color=GREY, ha="right")
+ax.set_xticks([0, 1, 2]); ax.set_xticklabels(labs, fontsize=7.0)
+ax.set_ylim(0, 0.88); ax.set_ylabel("LOSO accuracy", fontsize=8)
 ax.tick_params(labelsize=7.5)
-ax.set_title("b   a clock does almost all of it", fontsize=8.6, loc="left",
+ax.set_title("b   what the in-band EEG adds", fontsize=8.6, loc="left",
              weight="bold")
 
 # ---- (c) split vs accuracy --------------------------------------------------

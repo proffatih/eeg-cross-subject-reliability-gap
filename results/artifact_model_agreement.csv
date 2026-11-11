@@ -1,0 +1,4 @@
+model_a,model_b,agreement,kappa,chance_agreement
+in-band EEG (full decoder),artifact only (50 Hz + DC + 55-128 Hz),0.5999180999181,0.3572867099410365,0.335766
+in-band EEG (full decoder),clock only (no EEG),0.4885339885339885,0.233977115187559,0.335766
+artifact only (50 Hz + DC + 55-128 Hz),clock only (no EEG),0.5298935298935299,0.3061929977221364,0.335766
