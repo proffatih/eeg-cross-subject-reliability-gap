@@ -1,11 +1,11 @@
-# A recording-session confound in a four-channel dry-electrode EEG benchmark
+# A recording-session confound accounts for cross-subject accuracy on a four-contact dry-electrode EEG benchmark
 
 Analysis code for the manuscript of the same name.
 
 Cross-subject (leave-one-subject-out) characterisation of a four-channel
 dry-electrode Muse headband (TP9, AF7, AF8, TP10) on the open recordings of
 Bird et al. (2018): 4 subjects x 3 mental states (relaxed, neutral,
-concentrating) x 2 sessions = 24 recordings at 256 Hz.
+concentrating) x 2 trials = 24 recordings at 256 Hz.
 
 ## Data
 
@@ -37,6 +37,9 @@ All scripts are run from `code/`; results are written to `results/`.
 | `make_session_figure.py` | Figure 1 (session confound) | `manuscript/Figure1_session.pdf` | Fig. 1 | 10 s |
 | `make_tables.py` | Tables 3 and 4 straight from the result files | `manuscript/tab_*.tex` | Tables 3-4 | s |
 | `make_figures.py` | Figures 1-3, Tables 1-2 and the graphical abstract | `figures/` | all | 30 s |
+| `followups_round2.py` | Time-definition sensitivity; recording-level permutation tests; clock-only and artifact-only baselines for relaxed vs neutral; mains with time as a covariate | `mains_time_definitions.json`, `within_session_permutation.csv`, `within_session_baselines.csv`, `mains_covariate_model.json` | Results | 6 min |
+| `splice_tables.py --check` | Fails if the manuscript's table bodies disagree with the result files | screen | guard | s |
+| `audit_numbers.py` | Compares every decimal in the compiled PDF against the committed results | screen | guard | s |
 | `sensor_experiments.py s3c` | Optional: band-controlled rate test (identical content at every rate) | `sensor_rate_band_controlled.csv` | reply to reviewers | 2 min |
 
 `features.py` must be run first. `python sensor_experiments.py` without an
@@ -91,10 +94,19 @@ concentrating recordings were made on a different day from the relaxed and
 neutral recordings, about 46 h later. A classifier that sees no EEG at all, only
 where a window sits in time, reaches 0.569 cross-subject accuracy against 0.333
 chance; the full decoder on notch-filtered data reaches 0.574. A 50 Hz notch
-removes one symptom, not the confound. Relaxed versus neutral, recorded in the
-same session for every participant, is still decoded above chance (0.606 and
-0.659 against 0.500), so the recordings do carry cross-subject information — far
-less than the three-class figures imply.
+removes one symptom, not the confound.
+
+**No contrast in this dataset survives the controls.** Relaxed versus neutral,
+recorded on the same day for every participant, is the one contrast free of the
+day split and is decoded at 0.606 and 0.659 against 0.500. A second round of
+checks showed that this does not make it neural either: a decoder given only the
+recording clock reaches 0.592 on that contrast and an artifact-only decoder
+0.850. Permuting labels over each participant's four recordings — the
+exchangeable unit, since windows overlap and are serially correlated — leaves
+every participant short of significance (p = 0.167 for a and b, 0.500 for c and
+d; with four recordings the smallest attainable p is 0.167). The earlier claim
+that these recordings carry demonstrable cross-subject neural information has
+been withdrawn.
 
 Run `python code/session_confound.py all` to reproduce this.
 
@@ -136,3 +148,41 @@ headline three-class figure moved from 0.577 to 0.574.
 **The electrode, interference, converter-rate and window comparisons are kept
 for completeness but are scored against the confounded label.** They describe
 this dataset; they are not hardware guidance.
+
+### Second round of checks, 16 November 2026
+
+An internal audit by a co-author who had not written the package asked for three
+things the first revision had not done. All three are in `followups_round2.py`.
+
+**1. The 50 Hz-versus-time correlation depends on how "time" is defined.** The
+first revision reported one definition. Under three:
+
+| definition of time | rho | p |
+|---|---|---|
+| rank within each participant | **+0.584** | 0.011 |
+| hours since that participant's own first recording | +0.562 | 0.015 |
+| absolute wall-clock time | **-0.296** | 0.233 |
+
+The sign is not stable, because the participants were recorded in different
+parts of the afternoon. The manuscript now leads with the within-participant
+form and states all three.
+
+**2. Time as a covariate.** Mains level regressed on state with acquisition time
+and participant as covariates. Over all 24 recordings the coefficient on time is
++0.042 per hour (p = 0.003), while concentrating and relaxed differ from neutral
+by +0.46 (p = 0.37) and -0.26 (p = 0.39). State does not survive the model.
+
+**3. Recording-level permutation tests**, reported above, which withdrew the
+last positive claim.
+
+Two guards were added at the same time, after the first revision was found to
+contain a table body that still printed a withdrawn number:
+`splice_tables.py --check` fails when the manuscript's tables disagree with the
+result files, and `audit_numbers.py` compares every decimal in the compiled PDF
+against the committed results (currently 217 decimals, 0 unmatched).
+
+One data note that matters for anyone reusing these files:
+`subjectb-relaxed-2.csv` spans 958 s but contains **41.5 s** of data, in ten
+fragments separated by nine gaps totalling 916 s. Its windows do not sit at a
+single point in time, and a duration taken from first and last timestamp is
+wrong for this recording.

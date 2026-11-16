@@ -1,0 +1,46 @@
+{
+  "day1_only": {
+    "n": 18,
+    "params": {
+      "Intercept": 1.2362151039876192,
+      "C(state, Treatment('neutral'))[T.concentrating]": 1.224345435120639,
+      "C(state, Treatment('neutral'))[T.relaxed]": 0.024913596334385057,
+      "C(subject)[T.b]": 0.1315110008442908,
+      "C(subject)[T.c]": -0.0060767095767654475,
+      "C(subject)[T.d]": -0.44923816225839375,
+      "hours_from_first": 0.38366750563196367
+    },
+    "pvalues": {
+      "Intercept": 0.004342547144453298,
+      "C(state, Treatment('neutral'))[T.concentrating]": 0.0824650240665727,
+      "C(state, Treatment('neutral'))[T.relaxed]": 0.9407726979221074,
+      "C(subject)[T.b]": 0.7581826641412237,
+      "C(subject)[T.c]": 0.9907313478893757,
+      "C(subject)[T.d]": 0.31398735945115475,
+      "hours_from_first": 0.05039423204974989
+    },
+    "r2": 0.6049037933346955
+  },
+  "all_recordings": {
+    "n": 24,
+    "params": {
+      "Intercept": 1.4193295287959895,
+      "C(state, Treatment('neutral'))[T.concentrating]": 0.463761689915019,
+      "C(state, Treatment('neutral'))[T.relaxed]": -0.2566560240304914,
+      "C(subject)[T.b]": 0.2534231211066016,
+      "C(subject)[T.c]": 0.6167422539429338,
+      "C(subject)[T.d]": -0.31435963145031637,
+      "hours_from_first": 0.04234825584820921
+    },
+    "pvalues": {
+      "Intercept": 0.00015445627693979285,
+      "C(state, Treatment('neutral'))[T.concentrating]": 0.36508437751827805,
+      "C(state, Treatment('neutral'))[T.relaxed]": 0.38615424253719244,
+      "C(subject)[T.b]": 0.4570413071889996,
+      "C(subject)[T.c]": 0.117462854370638,
+      "C(subject)[T.d]": 0.35852361610050043,
+      "hours_from_first": 0.0028302110619955042
+    },
+    "r2": 0.8276773456603606
+  }
+}

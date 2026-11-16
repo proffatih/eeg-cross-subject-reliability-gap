@@ -1,0 +1,16 @@
+{
+  "n_recordings_day1": 18,
+  "absolute_clock": {
+    "rho": -0.2961816305469556,
+    "p": 0.23271685741068457
+  },
+  "elapsed_since_participants_own_first": {
+    "rho": 0.5622482267760789,
+    "p": 0.015152108373745714
+  },
+  "within_participant_rank": {
+    "rho": 0.5839020758193549,
+    "p": 0.01095142339462344
+  },
+  "note_spliced_recording": "subject b, relaxed, trial 2: 10572 samples spanning 957.7 s with nine gaps totalling 916 s, i.e. 41.5 s of data. Its windows do not sit at a single point in time."
+}

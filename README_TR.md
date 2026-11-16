@@ -1,4 +1,4 @@
-# Dört kanallı kuru elektrotlu bir EEG kıyas setinde kayıt-oturumu confound'u
+# Kayıt-oturumu confound'u, dört kontaklı kuru elektrotlu bir EEG kıyas setindeki kişiler-arası doğruluğu açıklıyor
 
 Aynı adlı makalenin analiz kodu.
 
@@ -120,3 +120,44 @@ Yeniden üretmek için: `python code/session_confound.py all`
 **Elektrot, girişim, dönüştürücü hızı ve pencere karşılaştırmaları** eksiksizlik
 için duruyor ama confound'lu etikete karşı puanlanmış durumda. Bu veri setini
 anlatıyorlar; donanım tavsiyesi değiller.
+
+
+### İkinci tur denetim, 16 Kasım 2026
+
+Paketi yazmamış bir ortak yazarın denetimi üç şey istedi; üçü de
+`followups_round2.py` içinde.
+
+**1. 50 Hz–zaman korelasyonu zamanın tanımına bağlı.** İlk revizyon tek tanım
+bildiriyordu. Üç tanımla:
+
+| zaman tanımı | rho | p |
+|---|---|---|
+| katılımcı içinde sıralanmış | **+0,584** | 0,011 |
+| katılımcının kendi ilk kaydından geçen saat | +0,562 | 0,015 |
+| mutlak duvar saati | **−0,296** | 0,233 |
+
+İşaret kararlı değil, çünkü katılımcılar öğleden sonranın farklı saatlerinde
+kaydedilmiş. Makale artık katılımcı-içi biçimi manşete taşıyor ve üçünü de
+yazıyor.
+
+**2. Zaman ortak değişken olarak.** Şebeke düzeyi, durum üzerine; kayıt zamanı
+ve katılımcı ortak değişken. 24 kaydın tamamında zamanın katsayısı saat başına
++0,042 (p = 0,003); concentrating ve relaxed nötrden +0,46 (p = 0,37) ve −0,26
+(p = 0,39) farklı. **Durum modeli geçemiyor.**
+
+**3. Kayıt düzeyinde permütasyon testleri.** Pencereler örtüşüyor ve seri
+korelasyonlu, bu yüzden değiştirilebilir birim kayıt. Her katılımcının dört
+kaydı üzerinde permütasyon: a ve b için p = 0,167, c ve d için p = 0,500; dört
+kayıtla ulaşılabilecek en küçük p zaten 0,167. **Makalenin son olumlu iddiası
+(relaxed–nötr kontrastının nöral bilgi taşıdığı) bu nedenle geri çekildi** —
+ayrıca o kontrastta yalnız-saat 0,592 ve yalnız-artefakt 0,850, bant-içi
+dekoder ise 0,606.
+
+Aynı anda iki koruma eklendi: `splice_tables.py --check` makale tabloları sonuç
+dosyalarıyla uyuşmazsa hata verir, `audit_numbers.py` derlenmiş PDF'teki her
+ondalığı sonuçlarla karşılaştırır (şu an 217 ondalık, 0 eşleşmeyen).
+
+Bu dosyaları yeniden kullanacaklar için bir veri notu:
+`subjectb-relaxed-2.csv` 958 saniyeye yayılıyor ama **41,5 saniye** veri
+içeriyor — toplam 916 saniyelik dokuz boşlukla ayrılmış on parça. O kaydın
+pencereleri tek bir zaman noktasına oturmuyor.
