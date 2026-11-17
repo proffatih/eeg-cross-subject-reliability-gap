@@ -265,9 +265,9 @@ def graphical_abstract():
 
 
 # figure file -> name used in the manuscript, so the renaming is not done by hand
-PUBLISHED = {"fig1_electrodes": "Figure2_electrodes",
-             "fig2_mains": "Figure1_mains",
-             "fig3_sensor": "Figure3_budget"}
+PUBLISHED = {"fig1_electrodes": "Figure3_electrodes",
+             "fig2_mains": "Figure2_mains",
+             "fig3_sensor": "Figure4_budget"}
 M = os.path.join(HERE, "..", "manuscript")
 os.makedirs(M, exist_ok=True)
 

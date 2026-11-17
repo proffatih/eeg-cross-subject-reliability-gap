@@ -36,7 +36,7 @@ All scripts are run from `code/`; results are written to `results/`.
 | `reviewer_followups.py` | 50 Hz power vs time; artifact-only decoder; prediction agreement; per-subject artifact baselines | `mains_vs_time*.{csv,json}`, `artifact_model_*.{csv,json}`, `artifact_baselines_per_subject.csv` | Results | 3 min |
 | `make_session_figure.py` | Figure 1 (session confound) | `manuscript/Figure1_session.pdf` | Fig. 1 | 10 s |
 | `make_tables.py` | Tables 3 and 4 straight from the result files | `manuscript/tab_*.tex` | Tables 3-4 | s |
-| `make_figures.py` | Figures 1-3, Tables 1-2 and the graphical abstract | `figures/` | all | 30 s |
+| `make_figures.py` | Figures 2-4, Tables 1-2 and the graphical abstract | `figures/` | all | 30 s |
 | `followups_round2.py` | Time-definition sensitivity; recording-level permutation tests; clock-only and artifact-only baselines for relaxed vs neutral; mains with time as a covariate | `mains_time_definitions.json`, `within_session_permutation.csv`, `within_session_baselines.csv`, `mains_covariate_model.json` | Results | 6 min |
 | `splice_tables.py --check` | Fails if the manuscript's table bodies disagree with the result files | screen | guard | s |
 | `audit_numbers.py` | Compares every decimal in the compiled PDF against the committed results | screen | guard | s |
